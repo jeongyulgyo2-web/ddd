@@ -1,6 +1,8 @@
 using System.Runtime.CompilerServices;
+using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
 public class PlayerController : MonoBehaviour
 {
@@ -10,16 +12,42 @@ public class PlayerController : MonoBehaviour
     public LayerMask groundLayer;
 
     private Rigidbody2D rb;
+    private Animator pAni;
     private bool isGrounded;
     private float moveinput;
+
+    private bool isGiant = false;
     private void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
+        pAni = GetComponent<Animator>();
     }
     private void Update()
     {
         rb.linearVelocity = new Vector2(moveinput * moveSpeed, rb.linearVelocity.y);
         isGrounded = Physics2D.OverlapCircle(groundCheck.position, 0.2f, groundLayer);
+        if (isGiant)
+        {
+            if (moveinput > 0)
+            {
+                transform.localScale = new Vector3(-2, 2, 2);
+            }
+            else if (moveinput < 0)
+            {
+                transform.localScale = new Vector3(2, 2, 2);
+            }
+        }
+        else
+        {
+            if (moveinput > 0)
+            {
+                transform.localScale = new Vector3(-1, 1, 1);
+            }
+            else if (moveinput < 0)
+            {
+                transform.localScale = new Vector3(1, 1, 1);
+            }
+        }
     }
     public void OnMove(InputValue value)
     {
@@ -32,7 +60,12 @@ public class PlayerController : MonoBehaviour
         {
             rb.linearVelocity = new Vector2(rb.linearVelocity.x, 0f) ;
             rb.AddForce(Vector2.up * jumpForce, ForceMode2D.Impulse);
+            pAni.SetTrigger("Jump");
         }
+    }
+    public void Resetitem()
+    {
+        isGiant = false;
     }
     private void OnTriggerEnter2D(Collider2D collision)
     {
@@ -40,5 +73,25 @@ public class PlayerController : MonoBehaviour
         {
             SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
         }
+        if (collision.CompareTag("Finish"))
+        {
+            collision.GetComponent<LevelObject>().MoveToNextLevel();
+        }
+        if (collision.CompareTag("Enemy"))
+        {
+            if (isGiant)
+            {
+                Destroy(collision.gameObject);
+            }
+            else
+                SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+        }
+        if (collision.CompareTag("item"))
+        {
+            isGiant = true;
+            Invoke(nameof(Resetitem), 3f);
+            Destroy(collision.gameObject);
+        }
     }
+    
 }
